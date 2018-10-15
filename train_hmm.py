@@ -11,12 +11,13 @@ class RegimeHmmModel(object):
         Takes daily return series, number of hidden states in the model, number of max iterations and path for pickled model to be saved.
         Trains Gaussian HMM model with given parameters and pickles the trained model
         """
+        self.daily_returns = daily_returns
         self.n_states = n_states
         self.n_iters = n_iters
         self.pickle_path = pickle_path
         # Train HMM
-        self.trained_model = _train(daily_returns, n_states, n_iters)
-        _dump_model(pickle_path)
+        self.trained_model = self._train(daily_returns, n_states, n_iters)
+        self._dump_model(pickle_path)
 
 
     def _train(self, daily_returns, n_states, n_iters):
