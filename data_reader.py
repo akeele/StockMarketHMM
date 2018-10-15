@@ -19,7 +19,7 @@ class DatastreamCsvPriceHandler(object):
         Read CSV file.
         """
         with open(self.csv_file, "r") as price_data:
-            price_series = {}
+            price_series = []
             is_price_series = False
             for line in price_data:
                 fields = line.split(";")
@@ -36,7 +36,7 @@ class DatastreamCsvPriceHandler(object):
                     # Convert date to datetime object
                     date = datetime.strptime(date, "%d.%m.%Y")
                     # Collect dates and prices to dictionary
-                    price_series[date] = price
+                    price_series.append([date, price])
         return price_series
 
     def _get_daily_prices(self, csv_file):
@@ -44,7 +44,7 @@ class DatastreamCsvPriceHandler(object):
         Return numpy array with shape = (days, 2) containing dates and prices
         """
         price_series = self._read_csv(self)
-        daily_prices = numpy.array(list(price_series.items()))
+        daily_prices = numpy.array(price_series)
         return daily_prices
 
     def _get_daily_returns(self, daily_prices):
