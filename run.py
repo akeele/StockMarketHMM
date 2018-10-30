@@ -34,6 +34,7 @@ if __name__ == "__main__":
     argparser.add_argument("--training-start", default=None, help="Start date of training period")
     argparser.add_argument("--training-end", default=None, help="End date of training period")
     argparser.add_argument("--strategy", default=None, help="Investment strategy to backtest. Currently supports 'buy-and-hold' and 'regime-filter'")
+    argparser.add_argument("--regimes", default=None, help="Number of volatility regimes")
     argparser.add_argument("--pickle-path", default=None, help="File to store trained HMM")
     args = argparser.parse_args()
 
@@ -50,19 +51,34 @@ if __name__ == "__main__":
     training_start_date = datetime.strptime(args.training_start, '%d.%m.%Y')
     training_end_date = datetime.strptime(args.training_end, '%d.%m.%Y')
     training_data = get_training_data(daily_returns, training_start_date, training_end_date)
-    RegimeHmmModel(training_data, n_states=2, n_iters=100000, pickle_path=args.pickle_path)
+    regimes = int(args.regimes)
+    RegimeHmmModel(training_data, n_states=regimes, n_iters=100000, pickle_path=args.pickle_path)
 
     # Run backtest
     backtest_start_date = datetime.strptime(args.backtest_start, '%d.%m.%Y')
     backtest_end_date = datetime.strptime(args.backtest_end, '%d.%m.%Y')
     trained_hmm_model = pickle.load(open(args.pickle_path, 'rb'))
-    #print(trained_hmm_model.transmat_)
-    #for i in range(trained_hmm_model.n_components):
-    #    print("Mean of state: ", trained_hmm_model.means_[i])
-    #    print("Variance of state: ", trained_hmm_model.covars_[i])
+    variances = trained_hmm_model.covars_
+    flattened_variances = variances.flatten()
+    high_regime = 0
+    if numpy.argmax(flattened_variances) == 1:
+        high_regime = 1
+    elif numpy.argmax(flattened_variances) == 2:
+        high_regime = 2
+    else:
+        high_regime = 0
+
     strategy = args.strategy
-    backtest = Backtest(daily_prices, daily_returns, strategy, trained_hmm_model, backtest_start_date, backtest_end_date)
+    backtest = Backtest(daily_prices, daily_returns, strategy, trained_hmm_model, backtest_start_date, backtest_end_date, high_regime)
     backtested_portfolio = backtest.run()
 
-    for item in backtested_portfolio:
-        print(item[1:])
+    # Print dates, portfolio equity, and current state if using regime-filter strategy
+    DATE = 0
+    EQUITY = 1
+    REGIME = 2
+    for day in backtested_portfolio:
+        day[DATE] = day[DATE].date()
+        if strategy == "buy-and-hold":
+            print(day[DATE], day[EQUITY])
+        else:
+            print(day[DATE], day[EQUITY], day[REGIME])
