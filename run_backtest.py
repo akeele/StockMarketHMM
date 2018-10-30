@@ -5,7 +5,7 @@ class Backtest(object):
     Create backtest
     """
 
-    def __init__(self, daily_prices, daily_returns, strategy, hmm_model, start_date, end_date):
+    def __init__(self, daily_prices, daily_returns, strategy, hmm_model, start_date, end_date, high_regime):
         """
         Takes strategy, which defines the strategy, start date and end date of backtest
         """
@@ -15,6 +15,7 @@ class Backtest(object):
         self.hmm_model = hmm_model
         self.start_date = start_date
         self.end_date = end_date
+        self.high_regime = high_regime
 
     def _get_index_before_backtest(self, daily_returns):
         """
@@ -45,16 +46,16 @@ class Backtest(object):
 
         return daily_prices[start:end]
 
-    def _check_regime(self, observed_return_series):
+    def _check_regime(self, observed_return_series, high_regime):
         """
         Check current volatility regime by finding the most probable state of underlying Markov chain with Viterbi algorithm
         """
         observed_return_series = numpy.column_stack([observed_return_series[:,1]])
         current_regime = self.hmm_model.predict(observed_return_series)[-1]
-        if current_regime == 0:
-            return "low"
-        else:
+        if current_regime == high_regime:
             return "high"
+        else:
+            return "low"
 
     def _buy_and_hold(self, backtest_period_daily_prices, portfolio):
         """
@@ -72,13 +73,16 @@ class Backtest(object):
         PRICE = 1
         is_invested = True
         before_backtest_index = self._get_index_before_backtest(self.daily_returns)
+
         # This is 1 in the beginning, but increases when portfolio outperforms and vice versa
         number_of_shares = 1
+
         for idx, day in enumerate(backtest_period_daily_prices):
             # Currently observed historical returns
-            observed_return_series = self.daily_returns[:(before_backtest_index+idx)]
-            current_regime = self._check_regime(observed_return_series)
+            observed_return_series = self.daily_returns[(before_backtest_index-1):(before_backtest_index+idx)]
+            current_regime = self._check_regime(observed_return_series, self.high_regime)
             day = numpy.append(day, current_regime)
+
             # Start invested
             if day[DATE] == self.start_date:
                 portfolio.append(day)
