@@ -4,11 +4,32 @@ import numpy
 
 
 portfolio_file = sys.argv[1]
+
+regimes = []
+with open(portfolio_file, "r") as p:
+    for line in p:
+        line = re.sub("[0-9\n\.\-]", '', line)
+        line = line.strip()
+        regimes.append(line)
+        
+print("Days:", len(regimes))
+number_of_lows = 0
+number_of_highs = 0
+for day in regimes:
+    if day == "low":
+        number_of_lows += 1
+    elif day == "high":
+        number_of_highs += 1
+
+print("Number of low regimes:", number_of_lows)
+print("Number of high regimes:", number_of_highs)
+        
 portfolio_value = []
 with open(portfolio_file, "r") as portfolio:
     for line in portfolio:
-        line = re.sub("[\[\]highlow']", '', line)
-        portfolio_value.append(float(line))
+        line = re.sub("[highlow\n]", '', line)
+        line = line.split(" ")
+        portfolio_value.append(float(line[1]))
 
 
 portfolio_returns = []
@@ -41,3 +62,4 @@ def calculate_max_drawdown(equity):
     return numpy.max(drawdowns)
 
 print("Max drawdown:", calculate_max_drawdown(portfolio_equity))
+
